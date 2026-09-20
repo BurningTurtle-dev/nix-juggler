@@ -1,7 +1,28 @@
-use ::std::process::Command;
+use std::collections::VecDeque;
+use std::env::args;
+use std::process::{Command, Stdio};
 
-fn main() -> std::io::Result<()> {
-    let child = Command::new("ls").arg("-l").arg("-a").spawn()?;
+fn spawn_writer(args: VecDeque<String>) -> std::io::Result<std::process::Child> {
+    let child = Command::new("./nix-juggler-writer")
+        .args(&args) // .args() takes IntoIterator<Item = AsRef<OsStr>>, Vec<String> works directly
+        .stdin(Stdio::piped())
+        //.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
 
-    Ok(())
+    Ok(child)
+}
+
+fn main() {
+    let mut args: VecDeque<String> = args().collect();
+    args.pop_front();
+
+    match spawn_writer(args) {
+        Ok(mut child) => match child.wait() {
+            Ok(status) if !status.success() => eprintln!("writer exited with: {status}"),
+            Err(e) => eprintln!("failed to wait on writer: {e}"),
+            _ => {}
+        },
+        Err(e) => eprintln!("failed to spawn writer: {e}"),
+    }
 }
