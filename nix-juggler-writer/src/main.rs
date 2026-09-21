@@ -36,7 +36,7 @@ fn main() {
         }
     };
 
-    let pkgs = match operation.as_str() {
+    let pkgs: Vec<String> = match operation.as_str() {
         "install" => existing_pkgs.union(&new_pkgs).cloned().collect(),
         "remove" => existing_pkgs.difference(&new_pkgs).cloned().collect(),
         _ => {
@@ -44,11 +44,6 @@ fn main() {
             std::process::exit(1);
         }
     };
-
-    //temp
-    for i in &pkgs {
-        println!("{}", i);
-    }
 
     let updated_module: String = create_nix(pkgs);
     if !write_nix_module(&config.nix_module_path, updated_module) {

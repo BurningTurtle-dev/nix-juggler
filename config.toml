@@ -1,1 +1,2 @@
 nix_module_path = "./test.nix"
+pkg_source = "nixpkgs"

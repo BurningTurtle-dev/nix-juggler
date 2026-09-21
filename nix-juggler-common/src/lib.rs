@@ -10,6 +10,7 @@ use thiserror::Error;
 #[derive(Deserialize)]
 pub struct Config {
     pub nix_module_path: String,
+    pub pkg_source: String,
 }
 
 #[derive(Debug, Error)]
