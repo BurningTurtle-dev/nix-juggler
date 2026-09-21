@@ -1,3 +1,5 @@
+use nix_juggler_common::get_existing_pkgs;
+
 use std::collections::VecDeque;
 use std::env::args;
 use std::process::{Command, Stdio};
