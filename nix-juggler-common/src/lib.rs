@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::File;
+use std::fs::{File, write};
 use std::io;
 use std::io::BufReader;
 use std::io::prelude::*;
@@ -43,6 +43,16 @@ pub fn get_existing_pkgs(path: &str) -> Result<HashSet<String>, io::Error> {
             body_reached = true;
         }
     }
-
     Ok(pkgs)
+}
+
+// Writes formated nix module to file
+pub fn write_nix_module(path: &str, contents: String) -> bool {
+    match write(path, contents) {
+        Ok(()) => true,
+        Err(e) => {
+            println!("Failed to write nix module: {e}");
+            false
+        }
+    }
 }

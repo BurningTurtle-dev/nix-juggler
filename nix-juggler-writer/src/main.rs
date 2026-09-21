@@ -3,8 +3,8 @@ use nix_juggler_common::*;
 use std::collections::{HashSet, VecDeque};
 
 // Formats the new output nix module
-fn create_nix(pkgs: Vec<String>) {
-    let head = "{ pkgs, ... }:\n{\nhome.pkgs = with pkgs; [\n";
+fn create_nix(pkgs: Vec<String>) -> String {
+    let head = "{ pkgs, ... }:\n{\nhome.packages = with pkgs; [\n";
     let tail = "];\n}";
 
     let mut buffer = String::new();
@@ -16,7 +16,7 @@ fn create_nix(pkgs: Vec<String>) {
     }
 
     buffer += tail;
-    println!("{buffer}");
+    buffer
 }
 
 fn main() {
@@ -45,5 +45,14 @@ fn main() {
         }
     };
 
-    create_nix(pkgs);
+    //temp
+    for i in &pkgs {
+        println!("{}", i);
+    }
+
+    let updated_module: String = create_nix(pkgs);
+    if !write_nix_module(&config.nix_module_path, updated_module) {
+        std::process::exit(1);
+    }
+    println!("written updated module");
 }
