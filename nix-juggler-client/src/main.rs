@@ -1,8 +1,20 @@
 use nix_juggler_common::*;
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::env::args;
 use std::process::{Command, Stdio};
+
+fn nix_profile_clean(path: String) {
+    let existing_pkgs: HashSet<String> = match get_existing_pkgs(&path) {
+        Ok(existing_pkgs) => existing_pkgs,
+        Err(e) => {
+            println!("{e}");
+            std::process::exit(1);
+        }
+    };
+
+    nix_profile_remove(existing_pkgs.into_iter().collect());
+}
 
 // installs pkgs to nix profile
 fn nix_profile_install(pkgs: VecDeque<String>, source: String) {
@@ -53,6 +65,7 @@ fn main() {
     match operation.as_str() {
         "install" => nix_profile_install(new_pkgs, config.pkg_source),
         "remove" => nix_profile_remove(new_pkgs),
+        "clean" => nix_profile_clean(config.nix_module_path),
         _ => {
             eprintln!("{} is an invalid argument", operation);
             std::process::exit(1);
