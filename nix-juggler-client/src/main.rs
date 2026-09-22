@@ -4,6 +4,7 @@ use std::collections::{HashSet, VecDeque};
 use std::env::args;
 use std::process::{Command, Stdio};
 
+// removes all installed nix profile pkgs
 fn nix_profile_clean(path: String) {
     let existing_pkgs: HashSet<String> = match get_existing_pkgs(&path) {
         Ok(existing_pkgs) => existing_pkgs,
@@ -30,10 +31,18 @@ fn nix_profile_install(pkgs: VecDeque<String>, source: String) {
 // removes pkgs to nix profile
 fn nix_profile_remove(pkgs: VecDeque<String>) {
     for pkg in pkgs {
+        let dyn_name: String = match get_dynamic_name(&pkg) {
+            Some(name) => name,
+            None => {
+                println!("No package found matching '{pkg}'");
+                continue;
+            }
+        };
+
         Command::new("nix")
-            .args(["profile", "remove", &pkg])
+            .args(["profile", "remove", &dyn_name])
             .status()
-            .expect("failed to remove to nix profile");
+            .expect("failed to remove from nix profile");
     }
 }
 
@@ -65,7 +74,10 @@ fn main() {
     match operation.as_str() {
         "install" => nix_profile_install(new_pkgs, config.pkg_source),
         "remove" => nix_profile_remove(new_pkgs),
-        "clean" => nix_profile_clean(config.nix_module_path),
+        "clean" => {
+            nix_profile_clean(config.nix_module_path);
+            std::process::exit(0); // no write needed
+        }
         _ => {
             eprintln!("{} is an invalid argument", operation);
             std::process::exit(1);

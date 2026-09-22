@@ -1,8 +1,9 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{File, write};
 use std::io;
 use std::io::BufReader;
 use std::io::prelude::*;
+use std::process::Command;
 
 use serde::Deserialize;
 use thiserror::Error;
@@ -11,6 +12,17 @@ use thiserror::Error;
 pub struct Config {
     pub nix_module_path: String,
     pub pkg_source: String,
+}
+
+#[derive(Deserialize)]
+pub struct ManifestRoot {
+    elements: HashMap<String, Package>,
+}
+
+#[derive(Deserialize)]
+struct Package {
+    #[serde(rename = "attrPath")]
+    attr_path: String,
 }
 
 #[derive(Debug, Error)]
@@ -24,6 +36,21 @@ pub enum ConfigError {
 pub fn load_config(path: &str) -> Result<Config, ConfigError> {
     let contents = std::fs::read_to_string(path)?;
     Ok(toml::from_str(&contents)?)
+}
+
+pub fn get_dynamic_name(pkg: &str) -> Option<String> {
+    let cmd = Command::new("nix")
+        .args(["profile", "list", "--json"])
+        .output()
+        .expect("failed to get nix profile list");
+
+    let manifest_root: ManifestRoot = serde_json::from_slice(&cmd.stdout).ok()?;
+
+    manifest_root
+        .elements
+        .into_iter()
+        .find(|(_, package)| package.attr_path.ends_with(pkg))
+        .map(|(name, _)| name)
 }
 
 // Reads the existing pkgs from the nix module
