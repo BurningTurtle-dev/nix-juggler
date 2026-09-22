@@ -1,7 +1,7 @@
 use nix_juggler_common::*;
 
 use clap::{Parser, Subcommand};
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 use std::process::{Command, Stdio};
 
 #[derive(Parser)]
@@ -46,7 +46,7 @@ fn nix_profile_clean(path: String) {
 }
 
 // installs pkgs to nix profile
-fn nix_profile_install(pkgs: VecDeque<String>, source: String) {
+fn nix_profile_install(pkgs: Vec<String>, source: String) {
     for pkg in pkgs {
         let package: String = format!("{source}#{pkg}");
         Command::new("nix")
@@ -57,7 +57,7 @@ fn nix_profile_install(pkgs: VecDeque<String>, source: String) {
 }
 
 // removes pkgs from nix profile
-fn nix_profile_remove(pkgs: VecDeque<String>) {
+fn nix_profile_remove(pkgs: Vec<String>) {
     for pkg in pkgs {
         let dyn_name: String = match get_dynamic_name(&pkg) {
             Some(name) => name,
@@ -96,8 +96,8 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Install { pkgs } => nix_profile_install(pkgs.into(), config.pkg_source),
-        Commands::Remove { pkgs } => nix_profile_remove(pkgs.into()),
+        Commands::Install { pkgs } => nix_profile_install(pkgs, config.pkg_source),
+        Commands::Remove { pkgs } => nix_profile_remove(pkgs),
         Commands::Clean => {
             nix_profile_clean(config.nix_module_path);
             std::process::exit(0); // no write needed
