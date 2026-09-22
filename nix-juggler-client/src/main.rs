@@ -62,7 +62,7 @@ fn nix_profile_remove(pkgs: Vec<String>) {
         let dyn_name: String = match get_dynamic_name(&pkg) {
             Some(name) => name,
             None => {
-                println!("No package found matching '{pkg}'");
+                println!("No package found matching '{pkg}' in nix profile");
                 continue;
             }
         };
