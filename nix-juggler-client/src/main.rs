@@ -1,8 +1,36 @@
 use nix_juggler_common::*;
 
+use clap::{Parser, Subcommand};
 use std::collections::{HashSet, VecDeque};
-use std::env::args;
 use std::process::{Command, Stdio};
+
+#[derive(Parser)]
+#[command(
+    name = "nix-juggler",
+    about = "Manage nix pkgs in your config and have them availible without having to rebuild.",
+    version
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Install one or more packages to the nix profile and the managed nix module.
+    Install {
+        /// Package names to install
+        pkgs: Vec<String>,
+    },
+    /// Remove one or more packages from the nix profile and the managed nix module.
+    Remove {
+        /// Package names to remove
+        pkgs: Vec<String>,
+    },
+    /// Remove all managed nix profile packages. Use after "nixos-rebuild switch to remove redundant
+    /// nix profile packages."
+    Clean,
+}
 
 // removes all installed nix profile pkgs
 fn nix_profile_clean(path: String) {
@@ -28,7 +56,7 @@ fn nix_profile_install(pkgs: VecDeque<String>, source: String) {
     }
 }
 
-// removes pkgs to nix profile
+// removes pkgs from nix profile
 fn nix_profile_remove(pkgs: VecDeque<String>) {
     for pkg in pkgs {
         let dyn_name: String = match get_dynamic_name(&pkg) {
@@ -46,16 +74,15 @@ fn nix_profile_remove(pkgs: VecDeque<String>) {
     }
 }
 
-// runs the writer as a child
-fn spawn_writer(args: VecDeque<String>) -> std::io::Result<std::process::Child> {
+// runs the writer as a child, forwarding it the exact args this binary was called with
+fn spawn_writer(args: Vec<String>) -> std::io::Result<std::process::Child> {
     // Locate the writer binary next to this binary
     let exe = std::env::current_exe()?;
     let writer_path = exe.with_file_name("nix-juggler-writer");
 
     let child = Command::new(writer_path)
-        .args(&args) // .args() takes IntoIterator<Item = AsRef<OsStr>>, Vec<String> works directly
+        .args(&args)
         .stdin(Stdio::piped())
-        //.stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
 
@@ -63,29 +90,22 @@ fn spawn_writer(args: VecDeque<String>) -> std::io::Result<std::process::Child> 
 }
 
 fn main() {
-    let mut args: VecDeque<String> = args().collect();
-    args.pop_front();
+    let writer_args: Vec<String> = std::env::args().skip(1).collect();
     let config: Config = load_config("./config.toml").unwrap(); // TODO set reasonable config path
 
-    let mut new_pkgs = args.clone();
-    let operation = new_pkgs.pop_front().unwrap();
+    let cli = Cli::parse();
 
-    // nix profile operations
-    match operation.as_str() {
-        "install" => nix_profile_install(new_pkgs, config.pkg_source),
-        "remove" => nix_profile_remove(new_pkgs),
-        "clean" => {
+    match cli.command {
+        Commands::Install { pkgs } => nix_profile_install(pkgs.into(), config.pkg_source),
+        Commands::Remove { pkgs } => nix_profile_remove(pkgs.into()),
+        Commands::Clean => {
             nix_profile_clean(config.nix_module_path);
             std::process::exit(0); // no write needed
         }
-        _ => {
-            eprintln!("{} is an invalid argument", operation);
-            std::process::exit(1);
-        }
-    };
+    }
 
     // spawn writer, who updates the nix module
-    match spawn_writer(args) {
+    match spawn_writer(writer_args) {
         Ok(mut child) => match child.wait() {
             Ok(status) if !status.success() => eprintln!("writer exited with: {status}"),
             Err(e) => eprintln!("failed to wait on writer: {e}"),
