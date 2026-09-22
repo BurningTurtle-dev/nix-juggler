@@ -3,13 +3,14 @@ use nix_juggler_common::*;
 use std::collections::{HashSet, VecDeque};
 
 // Formats the new output nix module
-fn create_nix(pkgs: Vec<String>) -> String {
+fn create_nix(mut pkgs: Vec<String>) -> String {
     let head = "{ pkgs, ... }:\n{\nhome.packages = with pkgs; [\n";
     let tail = "];\n}";
 
     let mut buffer = String::new();
     buffer += head;
 
+    pkgs.sort();
     for i in pkgs {
         buffer += &i;
         buffer += "\n";
