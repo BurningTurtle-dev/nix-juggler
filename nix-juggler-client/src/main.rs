@@ -46,32 +46,64 @@ fn nix_profile_clean(path: String) {
 }
 
 // installs pkgs to nix profile
-fn nix_profile_install(pkgs: Vec<String>, source: String) {
-    for pkg in pkgs {
-        let package: String = format!("{source}#{pkg}");
-        Command::new("nix")
-            .args(["profile", "add", &package])
-            .status()
-            .expect("failed to install to nix profile");
+fn nix_profile_install(pkgs: Vec<String>, source: String) -> bool {
+    let success: bool = is_valid_input(&pkgs);
+    if success {
+        for pkg in pkgs {
+            let package: String = format!("{source}#{pkg}");
+            let status = Command::new("nix")
+                .args(["profile", "add", &package])
+                .status();
+            match status {
+                Ok(exit_status) if exit_status.success() => {
+                    println!("installed {package}");
+                }
+                Ok(exit_status) => {
+                    eprintln!("nix profile add failed for {package} (exit code: {exit_status})");
+                    return false;
+                }
+                Err(e) => {
+                    eprintln!("failed to run nix: {e}");
+                }
+            }
+        }
     }
+    success
 }
 
 // removes pkgs from nix profile
-fn nix_profile_remove(pkgs: Vec<String>) {
-    for pkg in pkgs {
-        let dyn_name: String = match get_dynamic_name(&pkg) {
-            Some(name) => name,
-            None => {
-                println!("No package found matching '{pkg}' in nix profile");
-                continue;
-            }
-        };
+fn nix_profile_remove(pkgs: Vec<String>) -> bool {
+    let success: bool = is_valid_input(&pkgs);
+    if success {
+        for pkg in pkgs {
+            let dyn_name: String = match get_dynamic_name(&pkg) {
+                Some(name) => name,
+                None => {
+                    println!("No package found matching '{pkg}' in nix profile");
+                    continue;
+                }
+            };
 
-        Command::new("nix")
-            .args(["profile", "remove", &dyn_name])
-            .status()
-            .expect("failed to remove from nix profile");
+            let status = Command::new("nix")
+                .args(["profile", "remove", &dyn_name])
+                .status();
+            match status {
+                Ok(exit_status) if exit_status.success() => {
+                    println!("installed {dyn_name}");
+                }
+                Ok(exit_status) => {
+                    eprintln!(
+                        "nix profile remove failed for {dyn_name} (exit code: {exit_status})"
+                    );
+                    return false;
+                }
+                Err(e) => {
+                    eprintln!("failed to run nix: {e}");
+                }
+            }
+        }
     }
+    success
 }
 
 // runs the writer as a child, forwarding it the exact args this binary was called with
@@ -95,13 +127,18 @@ fn main() {
 
     let cli = Cli::parse();
 
-    match cli.command {
+    let success: bool = match cli.command {
         Commands::Install { pkgs } => nix_profile_install(pkgs, config.pkg_source),
         Commands::Remove { pkgs } => nix_profile_remove(pkgs),
         Commands::Clean => {
             nix_profile_clean(config.nix_module_path);
             std::process::exit(0); // no write needed
         }
+    };
+
+    // only write the module if nix profile was successfull
+    if !success {
+        std::process::exit(1);
     }
 
     // spawn writer, who updates the nix module

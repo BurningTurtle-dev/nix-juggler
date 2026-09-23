@@ -33,11 +33,31 @@ pub enum ConfigError {
     Parse(#[from] toml::de::Error),
 }
 
+// checks if str is formated like a valid pkg
+pub fn is_valid_pkg_name(pkg: &str) -> bool {
+    !pkg.is_empty()
+        && pkg
+            .chars()
+            .all(|c| c.is_alphanumeric() || matches!(c, '+' | '-' | '.' | '_' | '?' | '='))
+}
+
+// checks if all packages passed as arguments are valid
+pub fn is_valid_input(pkgs: &[String]) -> bool {
+    for pkg in pkgs {
+        if !is_valid_pkg_name(pkg) {
+            return false;
+        }
+    }
+    true
+}
+
+// loads the config
 pub fn load_config(path: &str) -> Result<Config, ConfigError> {
     let contents = std::fs::read_to_string(path)?;
     Ok(toml::from_str(&contents)?)
 }
 
+// gets the dynamic name of a pkg. needed for nix profile remove
 pub fn get_dynamic_name(pkg: &str) -> Option<String> {
     let cmd = Command::new("nix")
         .args(["profile", "list", "--json"])
