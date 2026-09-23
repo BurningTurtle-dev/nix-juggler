@@ -2,7 +2,7 @@ use nix_juggler_common::*;
 
 use clap::{Parser, Subcommand};
 use std::collections::HashSet;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 #[derive(Parser)]
 #[command(
