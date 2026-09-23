@@ -29,6 +29,11 @@ fn main() {
     let operation = args.pop_front().unwrap();
     let new_pkgs: HashSet<String> = args.into_iter().collect();
 
+    let input_pkgs: Vec<String> = new_pkgs.clone().into_iter().collect();
+    if !is_valid_input(&input_pkgs) {
+        std::process::exit(1);
+    }
+
     let existing_pkgs: HashSet<String> = match get_existing_pkgs(&config.nix_module_path) {
         Ok(existing_pkgs) => existing_pkgs,
         Err(e) => {

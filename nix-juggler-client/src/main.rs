@@ -107,16 +107,29 @@ fn nix_profile_remove(pkgs: Vec<String>) -> bool {
 }
 
 // runs the writer as a child, forwarding it the exact args this binary was called with
-fn spawn_writer(args: Vec<String>) -> std::io::Result<std::process::Child> {
+fn spawn_writer(args: Vec<String>, runner: String) -> std::io::Result<std::process::Child> {
     // Locate the writer binary next to this binary
     let exe = std::env::current_exe()?;
     let writer_path = exe.with_file_name("nix-juggler-writer");
 
-    let child = Command::new(writer_path)
-        .args(&args)
-        .stdin(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+    let writer_path = std::fs::canonicalize(&writer_path)?;
+
+    let mut cmd = match runner.as_str() {
+        "sudo" => {
+            let mut c = Command::new("sudo");
+            c.arg("--").arg(&writer_path);
+            c
+        }
+        "doas" => {
+            let mut c = Command::new("doas");
+            c.arg("--").arg(&writer_path);
+            c
+        }
+        "" => Command::new(&writer_path),
+        _ => Command::new(&writer_path),
+    };
+
+    let child = cmd.args(&args).spawn()?;
 
     Ok(child)
 }
@@ -142,7 +155,7 @@ fn main() {
     }
 
     // spawn writer, who updates the nix module
-    match spawn_writer(writer_args) {
+    match spawn_writer(writer_args, config.writer_prefix) {
         Ok(mut child) => match child.wait() {
             Ok(status) if !status.success() => eprintln!("writer exited with: {status}"),
             Err(e) => eprintln!("failed to wait on writer: {e}"),

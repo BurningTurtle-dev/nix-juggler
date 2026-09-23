@@ -1,2 +1,3 @@
 nix_module_path = "./test.nix"
 pkg_source = "nixpkgs"
+writer_prefix = "doas"
