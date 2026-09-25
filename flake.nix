@@ -16,6 +16,8 @@
       ];
     in
     {
+      homeManagerModules.default = import ./home-manager.nix;
+
       packages = forAllSystems (
         system:
         let

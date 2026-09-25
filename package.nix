@@ -5,7 +5,7 @@
   nix,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage {
   pname = "nix-juggler";
   version = "0.1.0";
 
@@ -17,13 +17,8 @@ rustPlatform.buildRustPackage rec {
 
   nativeBuildInputs = [ makeWrapper ];
 
-  # nix-juggler-client shells out to `nix profile add/remove/list` at runtime,
-  # so make sure `nix` is on PATH regardless of the caller's environment.
-  # nix-juggler-writer is spawned by the client via its own exe path
-  # (exe.with_file_name), so it just needs to live alongside the client in
-  # $out/bin, which buildRustPackage already gives us for free.
   postFixup = ''
-    wrapProgram $out/bin/nix-juggler-client \
+    wrapProgram $out/bin/nix-juggler\
       --prefix PATH : ${lib.makeBinPath [ nix ]}
   '';
 
@@ -31,7 +26,7 @@ rustPlatform.buildRustPackage rec {
     description = "Manage nix pkgs in your config and have them available without having to rebuild";
     homepage = "https://github.com/BurningTurtle-dev/nix-juggler";
     license = lib.licenses.gpl3Only;
-    mainProgram = "nix-juggler-client";
+    mainProgram = "nix-juggler";
     platforms = lib.platforms.unix;
   };
 }

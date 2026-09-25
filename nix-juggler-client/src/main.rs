@@ -89,7 +89,7 @@ fn nix_profile_remove(pkgs: Vec<String>) -> bool {
                 .status();
             match status {
                 Ok(exit_status) if exit_status.success() => {
-                    println!("installed {dyn_name}");
+                    println!("removed {dyn_name}");
                 }
                 Ok(exit_status) => {
                     eprintln!(

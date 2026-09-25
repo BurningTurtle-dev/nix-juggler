@@ -46,3 +46,4 @@ devenv.local.yaml
 
 #/target
 *.tar.gz
+./result

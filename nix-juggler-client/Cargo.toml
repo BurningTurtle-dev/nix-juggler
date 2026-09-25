@@ -1,5 +1,5 @@
 [package]
-name = "nix-juggler-client"
+name = "nix-juggler"
 version = "0.1.0"
 edition = "2024"
 
