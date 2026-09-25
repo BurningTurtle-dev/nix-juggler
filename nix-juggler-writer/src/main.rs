@@ -24,7 +24,17 @@ fn main() {
     let mut args: VecDeque<String> = std::env::args().collect();
     args.pop_front();
 
-    let config: Config = load_config("./config.toml").unwrap(); // TODO set reasonable config path
+    let config_path = match (args.pop_front(), args.pop_front()) {
+        (Some(flag), Some(path)) if flag == "--config" => path,
+        _ => {
+            eprintln!(
+                "nix-juggler-writer must be invoked with --config <path>; it's meant to be spawned by nix-juggler-client, not run directly"
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let config: Config = load_config(&config_path).unwrap(); // TODO set reasonable config path
 
     let operation = args.pop_front().unwrap();
     let new_pkgs: HashSet<String> = args.into_iter().collect();

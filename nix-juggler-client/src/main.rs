@@ -107,11 +107,14 @@ fn nix_profile_remove(pkgs: Vec<String>) -> bool {
 }
 
 // runs the writer as a child, forwarding it the exact args this binary was called with
-fn spawn_writer(args: Vec<String>, runner: String) -> std::io::Result<std::process::Child> {
+fn spawn_writer(
+    args: Vec<String>,
+    runner: String,
+    config_path: &str,
+) -> std::io::Result<std::process::Child> {
     // Locate the writer binary next to this binary
     let exe = std::env::current_exe()?;
     let writer_path = exe.with_file_name("nix-juggler-writer");
-
     let writer_path = std::fs::canonicalize(&writer_path)?;
 
     let mut cmd = match runner.as_str() {
@@ -129,14 +132,16 @@ fn spawn_writer(args: Vec<String>, runner: String) -> std::io::Result<std::proce
         _ => Command::new(&writer_path),
     };
 
+    cmd.arg("--config").arg(config_path);
     let child = cmd.args(&args).spawn()?;
 
     Ok(child)
 }
 
 fn main() {
+    let config_path: String = get_config_path();
     let writer_args: Vec<String> = std::env::args().skip(1).collect();
-    let config: Config = load_config("./config.toml").unwrap(); // TODO set reasonable config path
+    let config: Config = load_config(&config_path).unwrap();
 
     let cli = Cli::parse();
 
@@ -155,7 +160,7 @@ fn main() {
     }
 
     // spawn writer, who updates the nix module
-    match spawn_writer(writer_args, config.writer_prefix) {
+    match spawn_writer(writer_args, config.writer_prefix, &config_path) {
         Ok(mut child) => match child.wait() {
             Ok(status) if !status.success() => eprintln!("writer exited with: {status}"),
             Err(e) => eprintln!("failed to wait on writer: {e}"),
