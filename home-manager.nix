@@ -1,3 +1,4 @@
+{ self }:
 {
   config,
   lib,
@@ -15,7 +16,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.callPackage ../package.nix { };
+      default = self.packages.${pkgs.system}.default;
       description = "The nix-juggler package to install.";
     };
 
