@@ -79,7 +79,7 @@ pub fn get_dynamic_name(pkg: &str) -> Option<String> {
     manifest_root
         .elements
         .into_iter()
-        .find(|(_, package)| package.attr_path.ends_with(pkg))
+        .find(|(_, package)| package.attr_path.ends_with(&format!(".{pkg}"))
         .map(|(name, _)| name)
 }
 
