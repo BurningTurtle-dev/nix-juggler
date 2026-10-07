@@ -42,8 +42,11 @@ fn nix_profile_clean(path: String) {
         }
     };
 
-    nix_profile_remove(existing_pkgs.into_iter().collect(), false);
-    println!("finished cleaning nix profile");
+    if nix_profile_remove(existing_pkgs.into_iter().collect(), false) {
+        println!("finished cleaning nix profile");
+    } else {
+        eprintln!("finished cleaning nix profile with errors!!!");
+    }
 }
 
 // installs pkgs to nix profile
@@ -79,12 +82,16 @@ fn nix_profile_remove(pkgs: Vec<String>, print_status: bool) -> bool {
     if success {
         for pkg in pkgs {
             let dyn_name: String = match get_dynamic_name(&pkg) {
-                Some(name) => name,
-                None => {
+                Ok(Some(name)) => name,
+                Ok(None) => {
                     if print_status {
                         println!("No package found matching '{pkg}' in nix profile");
                     }
                     continue;
+                }
+                Err(e) => {
+                    eprintln!("failed to look up '{pkg}': {e}");
+                    return false;
                 }
             };
 
@@ -94,6 +101,7 @@ fn nix_profile_remove(pkgs: Vec<String>, print_status: bool) -> bool {
             match status {
                 Ok(exit_status) if exit_status.success() => {
                     println!("removed {dyn_name}");
+                    return true;
                 }
                 Ok(exit_status) => {
                     eprintln!(

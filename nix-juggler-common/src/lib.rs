@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
 use std::fs::{File, write};
 use std::io;
 use std::io::BufReader;
@@ -63,19 +64,28 @@ pub fn load_config(path: &str) -> Result<Config, ConfigError> {
 }
 
 // gets the dynamic name of a pkg. needed for nix profile remove
-pub fn get_dynamic_name(pkg: &str) -> Option<String> {
-    let cmd = Command::new("nix")
+pub fn get_dynamic_name(pkg: &str) -> Result<Option<String>, Box<dyn Error>> {
+    let output = Command::new("nix")
         .args(["profile", "list", "--json"])
-        .output()
-        .expect("failed to get nix profile list");
+        .output()?;
 
-    let manifest_root: ManifestRoot = serde_json::from_slice(&cmd.stdout).ok()?;
+    if !output.status.success() {
+        return Err(format!(
+            "nix profile list failed (exit code: {})\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr),
+        )
+        .into());
+    }
 
-    manifest_root
+    let manifest_root: ManifestRoot = serde_json::from_slice(&output.stdout)
+        .map_err(|e| format!("failed to parse nix profile list JSON: {e}"))?;
+
+    Ok(manifest_root
         .elements
         .into_iter()
         .find(|(_, package)| package.attr_path.ends_with(&format!(".{pkg}")))
-        .map(|(name, _)| name)
+        .map(|(name, _)| name))
 }
 
 // Reads the existing pkgs from the nix module
