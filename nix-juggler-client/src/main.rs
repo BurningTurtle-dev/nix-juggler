@@ -42,7 +42,8 @@ fn nix_profile_clean(path: String) {
         }
     };
 
-    nix_profile_remove(existing_pkgs.into_iter().collect());
+    nix_profile_remove(existing_pkgs.into_iter().collect(), false);
+    println!("finished cleaning nix profile");
 }
 
 // installs pkgs to nix profile
@@ -64,6 +65,7 @@ fn nix_profile_install(pkgs: Vec<String>, source: String) -> bool {
                 }
                 Err(e) => {
                     eprintln!("failed to run nix: {e}");
+                    return false;
                 }
             }
         }
@@ -72,14 +74,16 @@ fn nix_profile_install(pkgs: Vec<String>, source: String) -> bool {
 }
 
 // removes pkgs from nix profile
-fn nix_profile_remove(pkgs: Vec<String>) -> bool {
+fn nix_profile_remove(pkgs: Vec<String>, print_status: bool) -> bool {
     let success: bool = is_valid_input(&pkgs);
     if success {
         for pkg in pkgs {
             let dyn_name: String = match get_dynamic_name(&pkg) {
                 Some(name) => name,
                 None => {
-                    println!("No package found matching '{pkg}' in nix profile");
+                    if print_status {
+                        println!("No package found matching '{pkg}' in nix profile");
+                    }
                     continue;
                 }
             };
@@ -99,6 +103,7 @@ fn nix_profile_remove(pkgs: Vec<String>) -> bool {
                 }
                 Err(e) => {
                     eprintln!("failed to run nix: {e}");
+                    return false;
                 }
             }
         }
@@ -141,13 +146,13 @@ fn spawn_writer(
 fn main() {
     let config_path: String = get_config_path();
     let writer_args: Vec<String> = std::env::args().skip(1).collect();
-    let config: Config = load_config(&config_path).unwrap();
 
     let cli = Cli::parse();
+    let config: Config = load_config(&config_path).expect("failed to read config");
 
     let success: bool = match cli.command {
         Commands::Install { pkgs } => nix_profile_install(pkgs, config.pkg_source),
-        Commands::Remove { pkgs } => nix_profile_remove(pkgs),
+        Commands::Remove { pkgs } => nix_profile_remove(pkgs, true),
         Commands::Clean => {
             nix_profile_clean(config.nix_module_path);
             std::process::exit(0); // no write needed
