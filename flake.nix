@@ -16,7 +16,7 @@
       ];
     in
     {
-      homeManagerModules.default = import ./home-manager.nix { inherit self; };
+      nixosModules.default = import ./nixos-module.nix { inherit self; };
 
       packages = forAllSystems (
         system:

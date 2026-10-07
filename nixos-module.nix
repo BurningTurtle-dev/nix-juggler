@@ -16,7 +16,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = self.packages.${pkgs.system}.default;
+      default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
       description = "The nix-juggler package to install.";
     };
 
@@ -45,16 +45,16 @@ in
       description = ''
         Command used to run the writer with elevated privileges.
         Leave as "" to run unprivileged. If set to "sudo" or "doas", that
-        program must already be installed and available on PATH yourself —
+        program must already be installed and available on PATH yourself,
         nix-juggler does not install or manage it.
       '';
     };
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ cfg.package ];
+    environment.systemPackages = [ cfg.package ];
 
-    xdg.configFile."nix-juggler/config.toml".source = tomlFormat.generate "config.toml" {
+    environment.etc."juggler.toml".source = tomlFormat.generate "juggler.toml" {
       nix_module_path = cfg.nixModulePath;
       pkg_source = cfg.pkgSource;
       writer_prefix = cfg.writerPrefix;

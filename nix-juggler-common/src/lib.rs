@@ -35,12 +35,7 @@ pub enum ConfigError {
 }
 
 pub fn get_config_path() -> String {
-    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-        format!("{xdg}/nix-juggler/config.toml")
-    } else {
-        println!("Config not found");
-        "".to_string()
-    }
+    "/etc/juggler.toml".to_string()
 }
 
 // checks if str is formated like a valid pkg
