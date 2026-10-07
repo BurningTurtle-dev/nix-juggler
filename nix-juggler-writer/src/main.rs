@@ -2,12 +2,15 @@ use nix_juggler_common::*;
 
 use std::collections::{HashSet, VecDeque};
 
+// TODO other installation methodes other than home packages
 // Formats the new output nix module
 fn create_nix(mut pkgs: Vec<String>) -> String {
+    let warning_message = "# THIS NIX MODULE IS MANAGES BY nix-juggler DO NOT MANUALLY EDIT\n\n";
     let head = "{ pkgs, ... }:\n{\nhome.packages = with pkgs; [\n";
     let tail = "];\n}";
 
     let mut buffer = String::new();
+    buffer += warning_message;
     buffer += head;
 
     pkgs.sort();
