@@ -4,7 +4,7 @@ use std::fs::{File, copy, remove_file, write};
 use std::io;
 use std::io::BufReader;
 use std::io::prelude::*;
-use std::process::Command;
+use std::process::{Command, Output};
 
 use serde::Deserialize;
 use thiserror::Error;
@@ -64,8 +64,7 @@ pub fn load_config(path: &str) -> Result<Config, ConfigError> {
     Ok(toml::from_str(&contents)?)
 }
 
-// gets the dynamic name of a pkg. needed for nix profile remove
-pub fn get_dynamic_name(pkg: &str) -> Result<Option<String>, Box<dyn Error>> {
+pub fn fetch_profile_json() -> Result<Output, Box<dyn std::error::Error>> {
     let output = Command::new("nix")
         .args(["profile", "list", "--json"])
         .output()?;
@@ -78,7 +77,11 @@ pub fn get_dynamic_name(pkg: &str) -> Result<Option<String>, Box<dyn Error>> {
         )
         .into());
     }
+    Ok(output)
+}
 
+// gets the dynamic name of a pkg. needed for nix profile remove
+pub fn get_dynamic_name(pkg: &str, output: &Output) -> Result<Option<String>, Box<dyn Error>> {
     let manifest_root: ManifestRoot = serde_json::from_slice(&output.stdout)
         .map_err(|e| format!("failed to parse nix profile list JSON: {e}"))?;
 

@@ -2,7 +2,7 @@ use nix_juggler_common::*;
 
 use clap::{Parser, Subcommand};
 use std::collections::HashSet;
-use std::process::Command;
+use std::process::{Command, Output};
 
 #[derive(Parser)]
 #[command(
@@ -33,7 +33,7 @@ enum Commands {
 }
 
 // removes all installed nix profile pkgs
-fn nix_profile_clean(path: String) {
+fn nix_profile_clean(path: String, profile_json: Output) {
     let existing_pkgs: HashSet<String> = match get_existing_pkgs(&path) {
         Ok(existing_pkgs) => existing_pkgs,
         Err(e) => {
@@ -42,7 +42,7 @@ fn nix_profile_clean(path: String) {
         }
     };
 
-    if nix_profile_remove(existing_pkgs.into_iter().collect(), false) {
+    if nix_profile_remove(existing_pkgs.into_iter().collect(), false, profile_json) {
         println!("finished cleaning nix profile");
     } else {
         eprintln!("finished cleaning nix profile with errors!!!");
@@ -77,11 +77,11 @@ fn nix_profile_install(pkgs: Vec<String>, source: String) -> bool {
 }
 
 // removes pkgs from nix profile
-fn nix_profile_remove(pkgs: Vec<String>, print_status: bool) -> bool {
+fn nix_profile_remove(pkgs: Vec<String>, print_status: bool, profile_json: Output) -> bool {
     let success: bool = is_valid_input(&pkgs);
     if success {
         for pkg in pkgs {
-            let dyn_name: String = match get_dynamic_name(&pkg) {
+            let dyn_name: String = match get_dynamic_name(&pkg, &profile_json) {
                 Ok(Some(name)) => name,
                 Ok(None) => {
                     if print_status {
@@ -152,11 +152,12 @@ fn spawn_writer(
 }
 
 fn nix_profile_manager(command: Commands, pkg_source: String, nix_module_path: String) -> bool {
+    let profile_json: Output = fetch_profile_json().unwrap();
     match command {
         Commands::Install { pkgs } => nix_profile_install(pkgs, pkg_source),
-        Commands::Remove { pkgs } => nix_profile_remove(pkgs, true),
+        Commands::Remove { pkgs } => nix_profile_remove(pkgs, true, profile_json),
         Commands::Clean => {
-            nix_profile_clean(nix_module_path);
+            nix_profile_clean(nix_module_path, profile_json);
             std::process::exit(0); // no write needed
         }
     }
