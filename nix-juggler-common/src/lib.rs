@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::fs::{File, write};
+use std::fs::{File, copy, remove_file, write};
 use std::io;
 use std::io::BufReader;
 use std::io::prelude::*;
@@ -112,10 +112,26 @@ pub fn get_existing_pkgs(path: &str) -> Result<HashSet<String>, io::Error> {
 
 // Writes formated nix module to file
 pub fn write_nix_module(path: &str, contents: String) -> bool {
+    let backup_file: String = format!("{}.bak", path);
+    // create backup
+    match copy(path, &backup_file) {
+        Ok(_) => (),
+        Err(e) => eprintln!("Copy failed: {}", e),
+    }
+
     match write(path, contents) {
         Ok(()) => true,
         Err(e) => {
             println!("Failed to write nix module: {e}");
+            println!("rolling back");
+            match copy(&backup_file, path) {
+                Ok(_) => {
+                    if let Err(e) = remove_file(&backup_file) {
+                        eprintln!("Failed to remove backup: {}", e);
+                    }
+                }
+                Err(e) => eprintln!("Rollback failed: {}", e),
+            }
             false
         }
     }
