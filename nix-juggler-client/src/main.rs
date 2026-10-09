@@ -162,6 +162,16 @@ fn nix_profile_manager(command: Commands, pkg_source: String, nix_module_path: S
     }
 }
 
+fn reverse_command(command: Commands) -> Commands {
+    match command {
+        Commands::Install { pkgs } => Commands::Remove { pkgs },
+        Commands::Remove { pkgs } => Commands::Install { pkgs },
+        Commands::Clean => {
+            unreachable!("clean doesn't launch writer, rollback should never trigger")
+        }
+    }
+}
+
 fn main() {
     let config_path: String = get_config_path();
     let writer_args: Vec<String> = std::env::args().skip(1).collect();
@@ -177,6 +187,8 @@ fn main() {
 
     // only write the module if nix profile was successful
     if !success {
+        let reverse_command: Commands = reverse_command(cli.command);
+        nix_profile_manager(reverse_command, config.pkg_source, config.nix_module_path);
         std::process::exit(1);
     }
 
@@ -190,14 +202,7 @@ fn main() {
         Err(e) => {
             eprintln!("failed to spawn writer: {e}");
             eprintln!("rolling back");
-            let reverse_command: Commands = match cli.command {
-                Commands::Install { pkgs } => Commands::Remove { pkgs },
-                Commands::Remove { pkgs } => Commands::Install { pkgs },
-                Commands::Clean => unreachable!(
-                    "clean doesn't lauch writer. rollback should never trigger: {:?}",
-                    cli.command
-                ),
-            };
+            let reverse_command: Commands = reverse_command(cli.command);
             nix_profile_manager(reverse_command, config.pkg_source, config.nix_module_path);
         }
     }
