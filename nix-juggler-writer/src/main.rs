@@ -37,7 +37,7 @@ fn main() {
         }
     };
 
-    let config: Config = load_config(&config_path).unwrap(); // TODO set reasonable config path
+    let config: Config = load_config(&config_path).unwrap();
 
     let operation = args.pop_front().unwrap();
     let new_pkgs: HashSet<String> = args.into_iter().collect();

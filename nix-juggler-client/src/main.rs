@@ -15,7 +15,7 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Clone, Debug, Subcommand)]
 enum Commands {
     /// Install one or more packages to the nix profile and the managed nix module.
     Install {
@@ -151,6 +151,17 @@ fn spawn_writer(
     Ok(child)
 }
 
+fn nix_profile_manager(command: Commands, pkg_source: String, nix_module_path: String) -> bool {
+    match command {
+        Commands::Install { pkgs } => nix_profile_install(pkgs, pkg_source),
+        Commands::Remove { pkgs } => nix_profile_remove(pkgs, true),
+        Commands::Clean => {
+            nix_profile_clean(nix_module_path);
+            std::process::exit(0); // no write needed
+        }
+    }
+}
+
 fn main() {
     let config_path: String = get_config_path();
     let writer_args: Vec<String> = std::env::args().skip(1).collect();
@@ -158,16 +169,13 @@ fn main() {
     let cli = Cli::parse();
     let config: Config = load_config(&config_path).expect("failed to read config");
 
-    let success: bool = match cli.command {
-        Commands::Install { pkgs } => nix_profile_install(pkgs, config.pkg_source),
-        Commands::Remove { pkgs } => nix_profile_remove(pkgs, true),
-        Commands::Clean => {
-            nix_profile_clean(config.nix_module_path);
-            std::process::exit(0); // no write needed
-        }
-    };
+    let success: bool = nix_profile_manager(
+        cli.command.clone(),
+        config.pkg_source.clone(),
+        config.nix_module_path.clone(),
+    );
 
-    // only write the module if nix profile was successfull
+    // only write the module if nix profile was successful
     if !success {
         std::process::exit(1);
     }
@@ -179,6 +187,18 @@ fn main() {
             Err(e) => eprintln!("failed to wait on writer: {e}"),
             _ => {}
         },
-        Err(e) => eprintln!("failed to spawn writer: {e}"),
+        Err(e) => {
+            eprintln!("failed to spawn writer: {e}");
+            eprintln!("rolling back");
+            let reverse_command: Commands = match cli.command {
+                Commands::Install { pkgs } => Commands::Remove { pkgs },
+                Commands::Remove { pkgs } => Commands::Install { pkgs },
+                Commands::Clean => unreachable!(
+                    "clean doesn't lauch writer. rollback should never trigger: {:?}",
+                    cli.command
+                ),
+            };
+            nix_profile_manager(reverse_command, config.pkg_source, config.nix_module_path);
+        }
     }
 }

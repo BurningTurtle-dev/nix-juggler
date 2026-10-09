@@ -14,6 +14,7 @@ pub struct Config {
     pub nix_module_path: String,
     pub pkg_source: String,
     pub writer_prefix: String,
+    pub install_method: String,
 }
 
 #[derive(Deserialize)]
