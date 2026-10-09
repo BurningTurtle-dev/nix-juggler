@@ -125,12 +125,11 @@ pub fn write_nix_module(path: &str, contents: String) -> bool {
             println!("Failed to write nix module: {e}");
             println!("rolling back");
             match copy(&backup_file, path) {
-                Ok(_) => {
-                    if let Err(e) = remove_file(&backup_file) {
-                        eprintln!("Failed to remove backup: {}", e);
-                    }
-                }
+                Ok(_) => (),
                 Err(e) => eprintln!("Rollback failed: {}", e),
+            }
+            if let Err(e) = remove_file(&backup_file) {
+                eprintln!("Failed to remove backup: {}", e);
             }
             false
         }
