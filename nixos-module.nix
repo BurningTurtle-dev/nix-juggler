@@ -35,6 +35,14 @@ in
       description = "Flake reference used as the source when installing packages.";
     };
 
+    installMethod = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        How to install the packages, as systemPackages, userpackages, or home.packages.
+      '';
+      example = "home";
+    };
+
     writerPrefix = lib.mkOption {
       type = lib.types.enum [
         "sudo"
