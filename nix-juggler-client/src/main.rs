@@ -99,10 +99,8 @@ fn nix_profile_remove(pkgs: Vec<String>, print_status: bool, profile_json: Outpu
                 .args(["profile", "remove", &dyn_name])
                 .status();
             match status {
-                Ok(exit_status) if exit_status.success() => {
-                    println!("removed {dyn_name}");
-                    return true;
-                }
+                Ok(exit_status) if exit_status.success() => println!("removed {dyn_name}"),
+
                 Ok(exit_status) => {
                     eprintln!(
                         "nix profile remove failed for {dyn_name} (exit code: {exit_status})"
