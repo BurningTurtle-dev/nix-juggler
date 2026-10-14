@@ -65,6 +65,7 @@ in
     environment.etc."juggler.toml".source = tomlFormat.generate "juggler.toml" {
       nix_module_path = cfg.nixModulePath;
       pkg_source = cfg.pkgSource;
+      install_method = cfg.installMethod;
       writer_prefix = cfg.writerPrefix;
     };
   };
